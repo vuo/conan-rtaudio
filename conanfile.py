@@ -9,7 +9,8 @@ class RtAudioConan(ConanFile):
     package_version = '2'
     version = '%s-%s' % (source_version, package_version)
 
-    requires = 'llvm/3.3-2@vuo/stable'
+    requires = 'llvm/3.3-2@vuo/stable', \
+               'vuoutils/1.0@vuo/stable'
     settings = 'os', 'compiler', 'build_type', 'arch'
     url = 'http://www.music.mcgill.ca/~gary/rtaudio/'
     license = 'http://www.music.mcgill.ca/~gary/rtaudio/license.html'
@@ -18,6 +19,15 @@ class RtAudioConan(ConanFile):
     build_dir = '_build'
     install_dir = '_install'
     exports_sources = '*.patch'
+    libs = {
+        'rtaudio': 5,
+    }
+
+    def requirements(self):
+        if platform.system() == 'Linux':
+            self.requires('patchelf/0.10pre-1@vuo/stable')
+        elif platform.system() != 'Darwin':
+            raise Exception('Unknown platform "%s"' % platform.system())
 
     def source(self):
         tools.get('http://www.music.mcgill.ca/~gary/rtaudio/release/rtaudio-%s.tar.gz' % self.source_version,
@@ -28,6 +38,7 @@ class RtAudioConan(ConanFile):
         self.run('mv %s/readme %s/%s.txt' % (self.source_dir, self.source_dir, self.name))
 
     def build(self):
+        import VuoUtils
         tools.mkdir(self.build_dir)
         with tools.chdir(self.build_dir):
             autotools = AutoToolsBuildEnvironment(self)
@@ -41,8 +52,6 @@ class RtAudioConan(ConanFile):
 
             if platform.system() == 'Darwin':
                 autotools.cxx_flags.append('-mmacosx-version-min=10.10')
-                autotools.link_flags.append('-Wl,-headerpad_max_install_names')
-                autotools.link_flags.append('-Wl,-install_name,@rpath/librtaudio.dylib')
 
             env_vars = {
                 'CC' : self.deps_cpp_info['llvm'].rootpath + '/bin/clang',
@@ -59,9 +68,17 @@ class RtAudioConan(ConanFile):
                 autotools.make(args=['--quiet'])
                 autotools.make(target='install', args=['--quiet'])
 
+        with tools.chdir('%s/lib' % self.install_dir):
+            VuoUtils.fixLibs(self.libs, self.deps_cpp_info)
+
     def package(self):
+        if platform.system() == 'Darwin':
+            libext = 'dylib'
+        elif platform.system() == 'Linux':
+            libext = 'so'
+
         self.copy('*.h', src='%s/include/rtaudio' % self.install_dir, dst='include/RtAudio')
-        self.copy('librtaudio.dylib', src='%s/lib' % self.install_dir, dst='lib')
+        self.copy('librtaudio.%s' % libext, src='%s/lib' % self.install_dir, dst='lib')
 
         self.copy('%s.txt' % self.name, src=self.source_dir, dst='license')
 
