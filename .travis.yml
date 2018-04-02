@@ -15,8 +15,11 @@ matrix:
                   sources:
                       - sourceline: 'ppa:beineri/opt-qt594-trusty'
                   packages:
+                      - libasound2-dev
+                      - libjack-dev
+                      - libpulse-dev
+                      - oss4-dev
                       - qt59qbs
-                      - yasm
 
 before_install:
     - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
