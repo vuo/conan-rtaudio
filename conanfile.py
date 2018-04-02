@@ -25,6 +25,8 @@ class RtAudioConan(ConanFile):
 
         tools.patch(patch_file='modeluid.patch', base_path=self.source_dir)
 
+        self.run('mv %s/readme %s/%s.txt' % (self.source_dir, self.source_dir, self.name))
+
     def build(self):
         tools.mkdir(self.build_dir)
         with tools.chdir(self.build_dir):
@@ -60,6 +62,8 @@ class RtAudioConan(ConanFile):
     def package(self):
         self.copy('*.h', src='%s/include/rtaudio' % self.install_dir, dst='include/RtAudio')
         self.copy('librtaudio.dylib', src='%s/lib' % self.install_dir, dst='lib')
+
+        self.copy('%s.txt' % self.name, src=self.source_dir, dst='license')
 
     def package_info(self):
         self.cpp_info.libs = ['rtaudio']
