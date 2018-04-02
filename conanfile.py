@@ -6,7 +6,7 @@ class RtAudioConan(ConanFile):
     name = 'rtaudio'
 
     source_version = '4.1.2'
-    package_version = '1'
+    package_version = '2'
     version = '%s-%s' % (source_version, package_version)
 
     requires = 'llvm/3.3-1@vuo/stable',
