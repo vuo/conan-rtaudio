@@ -47,11 +47,11 @@ class RtAudioConan(ConanFile):
             # but this package doesn't need to link with them.
             autotools.libs = []
 
-            autotools.cxx_flags.append('-Oz')
-            autotools.cxx_flags.append('-DUNICODE')
+            autotools.flags.append('-Oz')
+            autotools.flags.append('-DUNICODE')
 
             if platform.system() == 'Darwin':
-                autotools.cxx_flags.append('-mmacosx-version-min=10.10')
+                autotools.flags.append('-mmacosx-version-min=10.10')
 
             env_vars = {
                 'CC' : self.deps_cpp_info['llvm'].rootpath + '/bin/clang',
