@@ -50,12 +50,14 @@ class RtAudioConan(ConanFile):
             autotools.flags.append('-Oz')
             autotools.flags.append('-DUNICODE')
 
+            autotools.cxx_flags.append('-lc++abi')
+
             if platform.system() == 'Darwin':
                 autotools.flags.append('-mmacosx-version-min=10.10')
 
             env_vars = {
                 'CC' : self.deps_cpp_info['llvm'].rootpath + '/bin/clang',
-                'CXX': self.deps_cpp_info['llvm'].rootpath + '/bin/clang++',
+                'CXX': self.deps_cpp_info['llvm'].rootpath + '/bin/clang++ -stdlib=libc++',
             }
             with tools.environment_append(env_vars):
                 autotools.configure(configure_dir='../%s' % self.source_dir,
