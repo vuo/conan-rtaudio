@@ -71,6 +71,8 @@ class RtAudioConan(ConanFile):
                 autotools.make(target='install', args=['--quiet'])
 
         with tools.chdir('%s/lib' % self.install_dir):
+            if platform.system() == 'Darwin':
+                self.run('install_name_tool -change @rpath/libc++.dylib /usr/lib/libc++.1.dylib librtaudio.dylib')
             VuoUtils.fixLibs(self.libs, self.deps_cpp_info)
 
     def package(self):
