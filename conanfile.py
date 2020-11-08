@@ -1,21 +1,25 @@
-from conans import AutoToolsBuildEnvironment, ConanFile, tools
+from conans import ConanFile, CMake, tools
 import os
 import platform
 
 class RtAudioConan(ConanFile):
     name = 'rtaudio'
 
-    source_version = '4.1.2'
-    package_version = '3'
+    source_version = '5.1.0'
+    package_version = '0'
     version = '%s-%s' % (source_version, package_version)
 
-    build_requires = 'llvm/3.3-5@vuo/stable', \
-               'vuoutils/1.0@vuo/stable'
+    build_requires = (
+        'llvm/5.0.2-1@vuo/stable',
+        'macos-sdk/11.0-0@vuo/stable',
+        'vuoutils/1.2@vuo/stable',
+    )
     settings = 'os', 'compiler', 'build_type', 'arch'
     url = 'http://www.music.mcgill.ca/~gary/rtaudio/'
     license = 'http://www.music.mcgill.ca/~gary/rtaudio/license.html'
     description = 'A cross-platform library for realtime audio input/output'
     source_dir = 'rtaudio-%s' % source_version
+    generators = 'cmake'
     build_dir = '_build'
     install_dir = '_install'
     exports_sources = '*.patch'
@@ -31,48 +35,32 @@ class RtAudioConan(ConanFile):
 
     def source(self):
         tools.get('http://www.music.mcgill.ca/~gary/rtaudio/release/rtaudio-%s.tar.gz' % self.source_version,
-                  sha256='294d044da313a430c44d311175a4f51c15d56d87ecf72ad9c236f57772ecffb8')
+                  sha256='ff138b2b6ed2b700b04b406be718df213052d4c952190280cf4e2fab4b61fe09')
 
         tools.patch(patch_file='modeluid.patch', base_path=self.source_dir)
 
-        self.run('mv %s/readme %s/%s.txt' % (self.source_dir, self.source_dir, self.name))
+        # README.md contains the license at the end.
+        self.run('sed -n \'/The RtAudio license/,$p\' %s/README.md > %s/%s.txt' % (self.source_dir, self.source_dir, self.name))
 
     def build(self):
-        import VuoUtils
+        cmake = CMake(self)
+        cmake.definitions['CMAKE_BUILD_TYPE'] = 'Release'
+        cmake.definitions['CMAKE_C_COMPILER'] = self.deps_cpp_info['llvm'].rootpath + '/bin/clang'
+        cmake.definitions['CMAKE_C_FLAGS'] = '-Oz -DNDEBUG'
+        cmake.definitions['CMAKE_OSX_ARCHITECTURES'] = 'x86_64;arm64'
+        cmake.definitions['CMAKE_OSX_DEPLOYMENT_TARGET'] = '10.11'
+        cmake.definitions['CMAKE_OSX_SYSROOT'] = self.deps_cpp_info['macos-sdk'].rootpath
+        cmake.definitions['CMAKE_INSTALL_PREFIX'] = '../%s' % self.install_dir
+
         tools.mkdir(self.build_dir)
         with tools.chdir(self.build_dir):
-            autotools = AutoToolsBuildEnvironment(self)
+            cmake.configure(source_dir='../%s' % self.source_dir,
+                            build_dir='.')
+            cmake.build()
+            cmake.install()
 
-            # The LLVM/Clang libs get automatically added by the `requires` line,
-            # but this package doesn't need to link with them.
-            autotools.libs = ['c++abi']
-
-            autotools.flags.append('-Oz')
-            autotools.flags.append('-DUNICODE')
-
-            autotools.cxx_flags.append('-lc++abi')
-
-            if platform.system() == 'Darwin':
-                autotools.flags.append('-mmacosx-version-min=10.10')
-
-            env_vars = {
-                'CC' : self.deps_cpp_info['llvm'].rootpath + '/bin/clang',
-                'CXX': self.deps_cpp_info['llvm'].rootpath + '/bin/clang++ -stdlib=libc++',
-            }
-            with tools.environment_append(env_vars):
-                autotools.configure(configure_dir='../%s' % self.source_dir,
-                                    build=False,
-                                    host=False,
-                                    args=['--quiet',
-                                          '--enable-static',
-                                          '--enable-shared',
-                                          '--prefix=%s/../%s' % (os.getcwd(), self.install_dir)])
-                autotools.make(args=['--quiet'])
-                autotools.make(target='install', args=['--quiet'])
-
+        import VuoUtils
         with tools.chdir('%s/lib' % self.install_dir):
-            if platform.system() == 'Darwin':
-                self.run('install_name_tool -change @rpath/libc++.dylib /usr/lib/libc++.1.dylib librtaudio.dylib')
             VuoUtils.fixLibs(self.libs, self.deps_cpp_info)
 
     def package(self):
@@ -81,7 +69,7 @@ class RtAudioConan(ConanFile):
         elif platform.system() == 'Linux':
             libext = 'so'
 
-        self.copy('*.h', src='%s/include/rtaudio' % self.install_dir, dst='include/RtAudio')
+        self.copy('*.h', src='%s/include' % self.install_dir, dst='include/RtAudio')
         self.copy('librtaudio.%s' % libext, src='%s/lib' % self.install_dir, dst='lib')
 
         self.copy('%s.txt' % self.name, src=self.source_dir, dst='license')
