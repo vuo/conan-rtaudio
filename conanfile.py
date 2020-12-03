@@ -6,7 +6,7 @@ class RtAudioConan(ConanFile):
     name = 'rtaudio'
 
     source_version = '5.1.0'
-    package_version = '0'
+    package_version = '1'
     version = '%s-%s' % (source_version, package_version)
 
     build_requires = (
@@ -51,6 +51,8 @@ class RtAudioConan(ConanFile):
         cmake.definitions['CMAKE_OSX_DEPLOYMENT_TARGET'] = '10.11'
         cmake.definitions['CMAKE_OSX_SYSROOT'] = self.deps_cpp_info['macos-sdk'].rootpath
         cmake.definitions['CMAKE_INSTALL_PREFIX'] = '../%s' % self.install_dir
+        cmake.definitions['CMAKE_SHARED_LINKER_FLAGS'] = '-Wl,-macos_version_min,10.11'
+        cmake.definitions['RTAUDIO_API_JACK'] = False
 
         tools.mkdir(self.build_dir)
         with tools.chdir(self.build_dir):
