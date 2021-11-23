@@ -5,14 +5,14 @@ import platform
 class RtAudioConan(ConanFile):
     name = 'rtaudio'
 
-    source_version = '5.1.0'
-    package_version = '1'
+    source_version = '5.2.0'
+    package_version = '0'
     version = '%s-%s' % (source_version, package_version)
 
     build_requires = (
-        'llvm/5.0.2-1@vuo/stable',
-        'macos-sdk/11.0-0@vuo/stable',
-        'vuoutils/1.2@vuo/stable',
+        'llvm/5.0.2-5@vuo+conan+llvm/stable',
+        'macos-sdk/11.0-0@vuo+conan+macos-sdk/stable',
+        'vuoutils/1.2@vuo+conan+vuoutils/stable',
     )
     settings = 'os', 'compiler', 'build_type', 'arch'
     url = 'http://www.music.mcgill.ca/~gary/rtaudio/'
@@ -35,12 +35,11 @@ class RtAudioConan(ConanFile):
 
     def source(self):
         tools.get('http://www.music.mcgill.ca/~gary/rtaudio/release/rtaudio-%s.tar.gz' % self.source_version,
-                  sha256='ff138b2b6ed2b700b04b406be718df213052d4c952190280cf4e2fab4b61fe09')
+                  sha256='d6089c214e5dbff136ab21f3f5efc284e93475ebd198c54d4b9b6c44419ef4e6')
 
         tools.patch(patch_file='modeluid.patch', base_path=self.source_dir)
 
-        # README.md contains the license at the end.
-        self.run('sed -n \'/The RtAudio license/,$p\' %s/README.md > %s/%s.txt' % (self.source_dir, self.source_dir, self.name))
+        self.run('mv %s/LICENSE %s/%s.txt' % (self.source_dir, self.source_dir, self.name))
 
     def build(self):
         cmake = CMake(self)
@@ -71,7 +70,7 @@ class RtAudioConan(ConanFile):
         elif platform.system() == 'Linux':
             libext = 'so'
 
-        self.copy('*.h', src='%s/include' % self.install_dir, dst='include/RtAudio')
+        self.copy('*.h', src='%s/include/rtaudio' % self.install_dir, dst='include/RtAudio')
         self.copy('librtaudio.%s' % libext, src='%s/lib' % self.install_dir, dst='lib')
 
         self.copy('%s.txt' % self.name, src=self.source_dir, dst='license')
